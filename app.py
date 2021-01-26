@@ -15,7 +15,7 @@ Base = automap_base()
 #Reflect the tables
 Base.prepare(engine, reflect=True)
 
-#Save refrences
+#Save references
 measurement = Base.classes.measurement
 station = Base.classes.station
 
@@ -82,6 +82,33 @@ def tobs():
     session.close()
 
     return jsonify(tobs_list)
+
+@app.route("/api/v1.0/<start>")
+def start():
+    session =Session(engine)
+    
+    #Calculate TMIN,TAVG and TMAX with start date
+    start = session.query(measurement.date, func.min(measurement.tobs), func.avg(measurement.tobs),func.max(measurement.tobs))\
+    filter(measurement.date >= start).group_by(measurement.date).all()
+
+    session.close()
+
+    start =[]
+    for row in start:
+
+
+@app.route("/api/v1.0/<start>/<end>")
+def startend():
+    session =Session(engine)
+
+#Calculate TMIN,TAVG and TMAX between dates
+info = session.query(measurement.date, func.min(measurement.tobs), func.avg(measurement.tobs),func.max(measurement.tobs))\
+    filter(measurement.date >= start).group_by(measurement.date).all()
+    
+    session.close()
+    
+    date = []
+    for d in date:
 
 
 if __name__ == "__main__":
