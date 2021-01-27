@@ -2,7 +2,7 @@ from flask import Flask, jsonify
 import sqlalchemy
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import create_engine, inspect, func
 import numpy as np
 import pandas as pd
 import datetime as dt
@@ -70,7 +70,7 @@ def stations():
 def tobs():
     session = Session(engine)
 
-    tobs_info=session.query(measurement.tobs).filter(measurement.station == 'USC00519281').filter(measurement.date > "2016-08-22").all()
+    tobs_info=session.query(measurement.tobs, measurement.date).filter(measurement.station == 'USC00519281').filter(measurement.date > "2016-08-22").all()
 
     tobs_list = []
 
@@ -84,32 +84,41 @@ def tobs():
     return jsonify(tobs_list)
 
 @app.route("/api/v1.0/<start>")
-def start():
+def begin(start):
     session =Session(engine)
     
     #Calculate TMIN,TAVG and TMAX with start date
-    start = session.query(measurement.date, func.min(measurement.tobs), func.avg(measurement.tobs),func.max(measurement.tobs))\
-    filter(measurement.date >= start).group_by(measurement.date).all()
+    sdate = session.query(func.min(measurement.tobs), func.avg(measurement.tobs),func.max(measurement.tobs))\
+    .filter(measurement.date >= start).group_by(measurement.date).all()
 
     session.close()
 
-    start =[]
-    for row in start:
+    beg_list ={}
+    for tmin, tavg, tmax in sdate:
+        beg_list["tmin"] = tmin
+        beg_list["tavg"] = tavg
+        beg_list["tmax"] = tmax
+
+    return beg_list
 
 
 @app.route("/api/v1.0/<start>/<end>")
-def startend():
+def startend(start,end):
     session =Session(engine)
 
 #Calculate TMIN,TAVG and TMAX between dates
-info = session.query(measurement.date, func.min(measurement.tobs), func.avg(measurement.tobs),func.max(measurement.tobs))\
-    filter(measurement.date >= start).group_by(measurement.date).all()
+    info = session.query(func.min(measurement.tobs), func.avg(measurement.tobs),func.max(measurement.tobs))\
+        .filter(measurement.date >= start).filter(measurement.date <= end).group_by(measurement.date).all()
     
     session.close()
     
-    date = []
-    for d in date:
+    bet_dict = {}
+    for tmin, tavg,tmax in info:
+        bet_dict["tmin"] = tmin
+        bet_dict["tavg"] = tavg
+        bet_dict["tmax"] = tmax
 
+    return bet_dict
 
 if __name__ == "__main__":
     app.run(debug=True)
